@@ -1,0 +1,10 @@
+{
+  "id": "wan27-video-generator",
+  "name": "Wan 2.7 AI Video & Image Generator",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Generate Wan 2.7 AI videos and images into your notes, estimate credit costs, and insert MCP configs with your wan2-7.io API key.",
+  "author": "Wan27",
+  "authorUrl": "https://wan2-7.io",
+  "isDesktopOnly": false
+}
