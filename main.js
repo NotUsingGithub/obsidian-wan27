@@ -132,7 +132,7 @@ async function runWan27(prompt, opts = {}) {
 
   for (let i = 0; i < maxPolls; i++) {
     if (pollEveryMs > 0) {
-      await new Promise((r) => setTimeout(r, pollEveryMs));
+      await new Promise((r) => window.setTimeout(r, pollEveryMs));
     }
     const poll = await apiCall('GET', `/api/v1/tasks/${encodeURIComponent(taskId)}`, undefined, apiKey, base);
     const status = poll.status || poll.data?.status;
@@ -159,10 +159,10 @@ class PromptModal extends Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl('h3', { text: this.title });
+    this.titleEl.setText(this.title);
     new Setting(contentEl)
       .setName('Prompt')
-      .setDesc('Describe the video or image to generate with Wan 2.7 (https://wan2-7.io/)')
+      .setDesc('Describe the video or image to generate (https://wan2-7.io/).')
       .addTextArea((t) => {
         t.inputEl.addClass('wan27-modal-prompt');
         t.onChange((v) => { this.prompt = v; });
@@ -176,7 +176,7 @@ class PromptModal extends Modal {
       });
     new Setting(contentEl)
       .addButton((b) =>
-        b.setButtonText('Generate with Wan 2.7').setCta().onClick(() => {
+        b.setButtonText('Generate').setCta().onClick(() => {
           if (!this.prompt.trim()) {
             new Notice('Please enter a prompt.');
             return;
@@ -185,6 +185,9 @@ class PromptModal extends Modal {
           this.onSubmit(this.prompt.trim(), this.aspectRatio);
         })
       );
+  }
+  onClose() {
+    this.contentEl.empty();
   }
 }
 
@@ -196,10 +199,9 @@ class Wan27SettingTab extends PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl('h2', { text: 'Wan 2.7 AI Video & Image Generator' });
     new Setting(containerEl)
-      .setName('Wan 2.7 API Token')
-      .setDesc('Create or manage your token at https://wan2-7.io/mcp/guide/')
+      .setName('API token')
+      .setDesc('Create or manage your token at https://wan2-7.io/mcp/guide/.')
       .addText((t) =>
         t.setPlaceholder('wan27_...')
           .setValue(this.plugin.settings.apiKey)
@@ -243,16 +245,17 @@ class Wan27SettingTab extends PluginSettingTab {
 
 class Wan27Plugin extends Plugin {
   async onload() {
-    this.settings = Object.assign({}, DEFAULTS, await this.loadData());
+    const loaded = (await this.loadData()) || {};
+    this.settings = { ...DEFAULTS, ...loaded };
     this.addSettingTab(new Wan27SettingTab(this.app, this));
 
     this.addCommand({
-      id: 'wan27-generate-video',
-      name: 'Generate AI video into this note',
+      id: 'generate-video',
+      name: 'Generate video into this note',
       editorCallback: (editor) => {
-        new PromptModal(this.app, 'Wan 2.7 — Generate AI Video', this.settings.videoModel, async (prompt, aspectRatio) => {
+        new PromptModal(this.app, 'Generate video', this.settings.videoModel, async (prompt, aspectRatio) => {
           try {
-            new Notice('Starting Wan 2.7 video generation…');
+            new Notice('Starting video generation…');
             const url = await runWan27(prompt, {
               model: this.settings.videoModel,
               resolution: this.settings.resolution,
@@ -260,22 +263,22 @@ class Wan27Plugin extends Plugin {
               duration: this.settings.duration,
               apiKey: this.settings.apiKey,
             });
-            editor.replaceSelection(`\n![Wan 2.7 Video — ${prompt}](${url})\n`);
-            new Notice('Wan 2.7 video embedded in note!');
+            editor.replaceSelection(`\n![Video — ${prompt}](${url})\n`);
+            new Notice('Video embedded in note.');
           } catch (e) {
-            new Notice(`Wan 2.7: ${e.message}`);
+            new Notice(`Generation failed: ${e.message}`);
           }
         }).open();
       },
     });
 
     this.addCommand({
-      id: 'wan27-generate-image',
-      name: 'Generate AI image into this note',
+      id: 'generate-image',
+      name: 'Generate image into this note',
       editorCallback: (editor) => {
-        new PromptModal(this.app, 'Wan 2.7 — Generate AI Image', this.settings.imageModel, async (prompt, aspectRatio) => {
+        new PromptModal(this.app, 'Generate image', this.settings.imageModel, async (prompt, aspectRatio) => {
           try {
-            new Notice('Starting Wan 2.7 image generation…');
+            new Notice('Starting image generation…');
             const url = await runWan27(prompt, {
               model: this.settings.imageModel,
               resolution: this.settings.resolution,
@@ -283,30 +286,30 @@ class Wan27Plugin extends Plugin {
               apiKey: this.settings.apiKey,
             });
             editor.replaceSelection(`\n![${prompt}](${url})\n`);
-            new Notice('Wan 2.7 image embedded in note!');
+            new Notice('Image embedded in note.');
           } catch (e) {
-            new Notice(`Wan 2.7: ${e.message}`);
+            new Notice(`Generation failed: ${e.message}`);
           }
         }).open();
       },
     });
 
     this.addCommand({
-      id: 'wan27-check-credits',
-      name: 'Show remaining Wan 2.7 credits',
+      id: 'check-credits',
+      name: 'Show remaining credits',
       callback: async () => {
         try {
           const c = await accountBalance(this.settings.apiKey);
-          new Notice(`Wan 2.7 remaining credits: ${c}`);
+          new Notice(`Remaining credits: ${c}`);
         } catch (e) {
-          new Notice(`Wan 2.7: ${e.message}`);
+          new Notice(`Check failed: ${e.message}`);
         }
       },
     });
 
     this.addCommand({
-      id: 'wan27-insert-mcp-config',
-      name: 'Insert Wan 2.7 MCP Server configuration block',
+      id: 'insert-mcp-config',
+      name: 'Insert MCP server configuration block',
       editorCallback: (editor) => {
         const snippet = [
           '```json',
